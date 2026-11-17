@@ -1,0 +1,17 @@
+node_modules
+.git
+.sites-checkout
+.next
+dist
+.wrangler
+.sites-runtime
+.env
+.env.local
+.env.production
+.dev.vars
+data
+outputs
+*.zip
+*.tar.gz
+
+.next-postgres

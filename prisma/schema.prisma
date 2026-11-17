@@ -1,0 +1,269 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+
+model Brands {
+ id String @id
+ scope String
+ name String
+ slug String
+ @@unique([scope, slug])
+ @@map("brands")
+}
+
+model Categories {
+ id String @id
+ scope String
+ name String
+ slug String
+ parent_id String?
+ @@unique([scope, slug])
+ @@map("categories")
+}
+
+model Products {
+ id String @id
+ scope String
+ name String
+ slug String
+ sku String
+ part_number String
+ part_search String
+ brand_id String
+ category_id String
+ description String
+ image String
+ datasheet String
+ source String
+ mode String
+ price Decimal? @db.Decimal(18,0)
+ stock Int
+ reserved Int
+ backorder Int
+ demo Int
+ status String
+ created BigInt
+ updated BigInt
+ @@unique([scope, sku])
+ @@unique([scope, slug])
+ @@map("products")
+}
+
+model Specs {
+ id String @id
+ scope String
+ product_id String
+ key String
+ label String
+ value String
+ unit String
+ number Float?
+ min Float?
+ max Float?
+ @@map("specs")
+}
+
+model Settings {
+ id String @id
+ scope String
+ value String
+ @@map("settings")
+}
+
+model Users {
+ id String @id
+ scope String
+ name String
+ email String
+ password_hash String
+ role String
+ status String
+ created BigInt
+ @@unique([scope, email])
+ @@map("users")
+}
+
+model Sessions {
+ id String @id
+ scope String
+ user_id String
+ expires BigInt
+ @@map("sessions")
+}
+
+model Orders {
+ id String @id
+ scope String
+ number String
+ user_id String?
+ customer String
+ status String
+ payment_status String
+ method String
+ subtotal Decimal @db.Decimal(18,0)
+ shipping Decimal @db.Decimal(18,0)
+ tax Decimal @db.Decimal(18,0)
+ total Decimal @db.Decimal(18,0)
+ request_key String
+ quote_id String?
+ created BigInt
+ @@unique([scope, request_key])
+ @@unique([scope, quote_id])
+  @@unique([scope, number], map: "orders_scope_number_uq")
+ @@map("orders")
+}
+
+model OrderItems {
+ id String @id
+ scope String
+ order_id String
+ product_id String
+ name String
+ part_number String
+ quantity Int
+ price Decimal @db.Decimal(18,0)
+ tax Float
+ discount Decimal @db.Decimal(18,0)
+ total Decimal @db.Decimal(18,0)
+ reserve Int
+ @@map("order_items")
+}
+
+model Rfqs {
+ id String @id
+ scope String
+ number String
+ user_id String?
+ customer String
+ status String
+ note String
+ created BigInt
+ @@map("rfqs")
+}
+
+model RfqItems {
+ id String @id
+ scope String
+ rfq_id String
+ product_id String?
+ name String
+ part_number String
+ quantity Int
+ note String
+ @@map("rfq_items")
+}
+
+model Quotes {
+ id String @id
+ scope String
+ number String
+ rfq_id String
+ version Int
+ customer String
+ seller String
+ status String
+ subtotal Decimal @db.Decimal(18,0)
+ shipping Decimal @db.Decimal(18,0)
+ tax Decimal @db.Decimal(18,0)
+ discount Decimal @db.Decimal(18,0)
+ total Decimal @db.Decimal(18,0)
+ valid_until BigInt
+ terms String
+ created BigInt
+ @@unique([scope, number, version])
+ @@map("quotes")
+}
+
+model QuoteItems {
+ id String @id
+ scope String
+ quote_id String
+ product_id String?
+ name String
+ part_number String
+ quantity Int
+ price Decimal @db.Decimal(18,0)
+ tax Float
+ discount Decimal @db.Decimal(18,0)
+ total Decimal @db.Decimal(18,0)
+ lead_time String
+ warranty String
+ @@map("quote_items")
+}
+
+model Assets {
+ id String @id
+ scope String
+ key String
+ name String
+ mime String
+ size Int
+ owner_id String
+ created BigInt
+ @@map("assets")
+}
+
+model Articles {
+ id String @id
+ scope String
+ slug String
+ title String
+ excerpt String
+ body String
+ category String
+ image String
+ status String
+ created BigInt
+ @@unique([scope, slug])
+ @@map("articles")
+}
+
+model Payments {
+ id String @id
+ scope String
+ order_id String
+ provider String
+ reference String
+ amount Decimal @db.Decimal(18,0)
+ created BigInt
+ @@map("payments")
+}
+
+model Events {
+ id String @id
+ scope String
+ provider String
+ event_id String
+ created BigInt
+ @@unique([scope, provider, event_id])
+ @@map("events")
+}
+
+model Audit {
+ id String @id
+ scope String
+ actor_id String
+ action String
+ entity String
+ created BigInt
+ @@map("audit")
+}
+
+model Guards {
+ id String @id
+ scope String
+ ok Int
+ @@map("guards")
+}
+
+model RateLimits {
+ id String @id
+ scope String
+ count Int
+ expires BigInt
+ @@map("rate_limits")
+}

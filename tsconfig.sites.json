@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"paths":{"@/*":["./*"],"@runtime":["./server/runtime-cf.ts"]}}}
