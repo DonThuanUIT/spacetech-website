@@ -1,73 +1,130 @@
 # Đưa SpaceTech lên tên miền và Google
 
-SpaceTech hiện dùng bản xem thử riêng để duyệt. Bản chạy công khai dùng Next.js + PostgreSQL. Khách gửi yêu cầu đặt hàng và người bán xem trong **Admin → Đơn hàng**. Đăng ký tên miền, đưa website lên máy chủ và lập chỉ mục Google là ba bước riêng.
+SpaceTech chạy trên **Vibe Host của Mắt Bão** với Next.js + PostgreSQL. Khách gửi yêu cầu đặt hàng và người bán xem trong **Admin → Đơn hàng**. Tài liệu này hướng dẫn quy trình deploy, cấu hình và đưa website lên Google Search.
 
 ## 1. Chuẩn bị dữ liệu và tên miền
 
-- Chọn một tên miền bạn sở hữu hoặc đăng ký tên miền còn trống. Ví dụ trong tài liệu dùng `spacetech.example` làm chỗ điền.
-- Chuẩn bị một VPS có IP công khai, SSH, Docker Engine và Docker Compose. Cần lưu bền vững dữ liệu PostgreSQL và ảnh tải lên.
-- Điền thông tin người bán, danh mục, giá, tồn kho, chính sách xử lý yêu cầu, giao hàng và bảo mật. Rà soát thủ tục áp dụng với cơ quan có thẩm quyền trước khi mở cho khách. Việc bỏ chức năng thanh toán trực tuyến không tự xác định website có phải làm thủ tục hay không. Cổng thông tin thương mại điện tử của Bộ Công Thương: <https://online.gov.vn/>.
+- Chuẩn bị một tên miền bạn sở hữu hoặc đăng ký tên miền còn trống.
+- Điền thông tin người bán, danh mục, giá, tồn kho, chính sách xử lý yêu cầu, giao hàng và bảo mật. Rà soát thủ tục áp dụng với cơ quan có thẩm quyền trước khi mở cho khách. Cổng thông tin thương mại điện tử của Bộ Công Thương: <https://online.gov.vn/>.
 
-## 2. Chạy bản chuẩn bị trên VPS
+## 2. Deploy lên Vibe Host Mắt Bão
 
-Chuyển ZIP lên VPS, giải nén và vào thư mục chứa `compose.yaml`. Cài Docker và Compose theo tài liệu của hệ điều hành bạn dùng. Tạo `.env` từ `.env.example` nếu chưa có:
+### 2.1. Cấu hình biến môi trường
+
+Trong **panel Mắt Bão**, tìm mục cấu hình biến môi trường (Environment Variables) của ứng dụng và điền các giá trị sau:
+
+| Biến | Mô tả |
+| --- | --- |
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL do Mắt Bão cấp — lấy trong mục Database trên panel |
+| `AUTH_SECRET` | Chuỗi ngẫu nhiên tối thiểu 32 ký tự — tạo bằng lệnh bên dưới |
+| `APP_URL` | URL HTTPS đầy đủ của website, ví dụ `https://spacetech.vn` |
+| `UPLOAD_DIR` | Đường dẫn thư mục lưu file upload, ví dụ `./data/uploads` |
+| `INDEX_PUBLIC_SITE` | `false` trong giai đoạn chuẩn bị; `true` sau khi nghiệm thu |
+
+Tạo `AUTH_SECRET` ngẫu nhiên trên máy tính:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Dán kết quả vào ô `AUTH_SECRET` trên panel. Không dùng chuỗi dễ đoán hoặc giống `AUTH_SECRET` của môi trường khác.
+
+### 2.2. Liên kết Git và Deploy
+
+1. Trong panel Mắt Bão, liên kết ứng dụng với Git repository chứa mã nguồn SpaceTech.
+2. Push code lên nhánh đã liên kết (thường là `main`).
+3. Vào panel, chọn ứng dụng và nhấn **Deploy** để triển khai phiên bản mới. Quá trình build diễn ra tự động; theo dõi log build để phát hiện lỗi.
+
+> [!NOTE]
+> Vibe Host không tự deploy khi push — bạn phải nhấn **Deploy** thủ công trên panel sau mỗi lần push code mới.
+
+### 2.3. Chạy migration database
+
+Sau khi deploy thành công lần đầu, chạy migration để tạo cấu trúc bảng trong PostgreSQL. Thực hiện từ **terminal/console** trên panel (nếu Mắt Bão cung cấp):
 
 ```bash
-cp -n .env.example .env
-openssl rand -hex 32
+npm run db:deploy
 ```
 
-Trong `.env`, đặt `POSTGRES_PASSWORD` riêng bằng chữ và số, đồng bộ mật khẩu trong `DATABASE_URL`, dán chuỗi ngẫu nhiên vào `AUTH_SECRET`. Đặt `WEB_BIND_ADDRESS="127.0.0.1"`, `APP_URL="http://localhost:3000"` và `INDEX_PUBLIC_SITE="false"`. Điền `ADMIN_EMAIL` và `ADMIN_PASSWORD` để tạo tài khoản theo README.
+Lệnh này chạy `prisma migrate deploy` — áp dụng toàn bộ migration SQL vào database PostgreSQL của Vibe Host. Chỉ cần chạy một lần lúc đầu và mỗi khi có migration mới.
+
+> [!IMPORTANT]
+> Nếu panel không có terminal, liên hệ hỗ trợ Mắt Bão để yêu cầu chạy lệnh migration hoặc hỏi về cách thực hiện migration qua panel.
+
+### 2.4. Seed dữ liệu mẫu (lần đầu)
 
 ```bash
-docker compose up -d --build
-docker compose ps
-docker compose logs --tail=50 web
-docker compose exec web npm run db:seed
-docker compose exec web npm run admin:create
+npm run db:seed
 ```
 
-Chờ web sẵn sàng trước khi chạy hai lệnh `exec`. Xóa giá trị `ADMIN_PASSWORD` khỏi `.env` sau khi tạo, rồi chạy `docker compose up -d --force-recreate web`.
+Tạo 4 thương hiệu, 6 danh mục và 6 sản phẩm mẫu để kiểm tra. Lệnh bỏ qua nếu dữ liệu đã tồn tại — không ghi đè cửa hàng đã có.
 
-Để mở bản đang chuẩn bị từ máy tính của bạn, tạo SSH tunnel (thay `user` và `IP_VPS`):
+### 2.5. Tạo tài khoản admin
+
+Trên panel, thêm tạm thời 3 biến môi trường sau rồi nhấn **Deploy** lại (hoặc restart app):
+
+| Biến | Giá trị |
+| --- | --- |
+| `ADMIN_EMAIL` | Email đăng nhập admin |
+| `ADMIN_PASSWORD` | Mật khẩu ít nhất 12 ký tự |
+| `ADMIN_NAME` | Tên hiển thị, ví dụ `SpaceTech Admin` |
+
+Sau khi app chạy lại, thực hiện từ terminal/console:
 
 ```bash
-ssh -N -L 3000:127.0.0.1:3000 user@IP_VPS
+npm run admin:create
 ```
 
-Giữ cửa sổ SSH mở và vào `http://localhost:3000`. Nếu đã có một website dùng cổng 3000 trên máy tính, dừng website đó trước. Đăng nhập và kiểm tra một đơn thử trong Admin. Cập nhật sản phẩm và thông tin thật trước khi bỏ dấu **Hiển thị thông báo dữ liệu mẫu** trong **Admin → Cấu hình website**. Với từng sản phẩm thật, bỏ dấu dữ liệu mẫu trong màn sửa sản phẩm. Ẩn những mã mẫu chưa dùng.
+**Quan trọng:** Sau khi tạo xong, **xóa ngay** `ADMIN_PASSWORD` khỏi biến môi trường trên panel và Deploy lại để bỏ mật khẩu khỏi môi trường runtime. Giữ lại `ADMIN_EMAIL` và `ADMIN_NAME`.
 
-## 3. Mở website qua HTTPS
+### 2.6. Kiểm tra bản chuẩn bị
 
-Trong trang quản lý DNS của tên miền, tạo bản ghi **A** cho tên miền bạn định dùng trỏ vào IPv4 của VPS. Nếu dùng tên miền gốc, nhiều nhà cung cấp dùng `@` làm tên bản ghi. Không tạo AAAA trừ khi VPS có IPv6 hoạt động. Cho phép kết nối tới VPS ở cổng 80 và 443, giữ 5432 và 3000 chỉ ở loopback. Kiểm tra DNS trỏ đúng IP và cổng 80/443 đang trống.
+Mở URL của ứng dụng trên panel. Đăng nhập tại `/dang-nhap` bằng tài khoản admin vừa tạo, rồi vào `/admin` để:
 
-Đổi `.env` sang tên miền thật:
+- Kiểm tra 6 sản phẩm mẫu xuất hiện.
+- Thêm thương hiệu và danh mục thật tại **Danh mục & Hãng**.
+- Thêm sản phẩm thật, bỏ dấu **Giá và tồn kho minh họa** khi đã xác nhận dữ liệu.
+- Cập nhật thông tin cửa hàng tại **Cấu hình website** (logo, hotline, địa chỉ, MST).
+- Gửi một yêu cầu thử từ trang khách và kiểm tra đơn xuất hiện trong Admin.
 
-```dotenv
-SITE_DOMAIN="spacetech.example"
-APP_URL="https://spacetech.example"
-WEB_BIND_ADDRESS="127.0.0.1"
-INDEX_PUBLIC_SITE="false"
+## 3. Mở website qua tên miền riêng
+
+### 3.1. Trỏ DNS
+
+Trong trang quản lý DNS của tên miền, tạo bản ghi **A** trỏ về IP máy chủ Vibe Host (lấy trong panel Mắt Bão). Nếu dùng tên miền gốc (không có `www`), nhiều nhà cung cấp dùng `@` làm tên bản ghi. Chờ DNS cập nhật (thường 5–30 phút).
+
+### 3.2. Cấu hình tên miền trên panel
+
+Trong panel Mắt Bão, thêm tên miền vào ứng dụng và bật HTTPS (Vibe Host tự cấp chứng chỉ Let's Encrypt). Sau khi kích hoạt, cập nhật biến môi trường:
+
+```
+APP_URL=https://ten-mien-cua-ban.vn
 ```
 
-Dùng cùng một tên miền trong hai giá trị đầu. Chạy cấu hình có proxy HTTPS đi kèm:
-
-```bash
-docker compose -f compose.yaml -f compose.public.yaml up -d --build
-docker compose -f compose.yaml -f compose.public.yaml logs --tail=60 proxy
-```
-
-Proxy Caddy sẽ phục vụ website và xin chứng chỉ HTTPS khi tên miền trỏ đúng và máy chủ truy cập được. Mở tên miền trên trình duyệt. Kiểm tra truy cập khách, đặt thử, đơn xuất hiện trong Admin, HTTPS và chính sách bảo mật. Các yêu cầu đã gửi nằm trong Admin. Bản này chưa gửi email thông báo tự động.
-
-`INDEX_PUBLIC_SITE=false` chỉ kiểm soát lập chỉ mục. Việc bật proxy HTTPS ở bước này sẽ cho phép khách truy cập qua tên miền.
+Nhấn **Deploy** để áp dụng. Mở tên miền trên trình duyệt, kiểm tra HTTPS và toàn bộ luồng khách → đơn hàng → Admin.
 
 ## 4. Đưa vào Google Search
 
-1. Sau khi nghiệm thu website công khai, đặt `INDEX_PUBLIC_SITE="true"` và chạy `docker compose -f compose.yaml -f compose.public.yaml up -d --force-recreate web`.
-2. Mở `https://TEN_MIEN/robots.txt` và `https://TEN_MIEN/sitemap.xml`. Tệp sitemap phải dùng đúng tên miền và chứa các trang giới thiệu, danh mục, bài viết và mã sản phẩm thật. Nếu sitemap trống, kiểm tra `APP_URL`, `INDEX_PUBLIC_SITE` và chế độ mẫu.
-3. Mở [Google Search Console](https://search.google.com/search-console), thêm thuộc tính **Tên miền**, rồi sao chép chính xác giá trị **TXT** Google đưa vào trang quản lý DNS. Bấm **Xác minh** khi DNS đã nhận bản ghi.
-4. Trong **Sơ đồ trang web**, gửi `https://TEN_MIEN/sitemap.xml`. Dùng **Kiểm tra URL** cho trang chủ và trang sản phẩm quan trọng, rồi yêu cầu lập chỉ mục nếu đủ điều kiện.
+1. Sau khi nghiệm thu website công khai, đặt `INDEX_PUBLIC_SITE=true` trong biến môi trường trên panel và nhấn **Deploy**.
+2. Mở `https://ten-mien/robots.txt` và `https://ten-mien/sitemap.xml`. Sitemap phải dùng đúng tên miền và chứa các trang giới thiệu, danh mục, bài viết và mã sản phẩm thật. Nếu sitemap trống, kiểm tra `APP_URL` và `INDEX_PUBLIC_SITE`.
+3. Mở [Google Search Console](https://search.google.com/search-console), thêm thuộc tính **Tên miền**, sao chép chính xác giá trị **TXT** Google đưa vào trang quản lý DNS. Bấm **Xác minh** khi DNS đã nhận bản ghi.
+4. Trong **Sơ đồ trang web**, gửi `https://ten-mien/sitemap.xml`. Dùng **Kiểm tra URL** cho trang chủ và trang sản phẩm quan trọng, rồi yêu cầu lập chỉ mục nếu đủ điều kiện.
 
 Google tự quyết định thời điểm và việc hiển thị từng URL. Gửi sitemap giúp Google tìm URL. Bản xem thử riêng và các trang giỏ hàng, gửi yêu cầu, tài khoản, quản trị không dùng để lập chỉ mục.
 
 Tài liệu Google: [Xác minh quyền sở hữu](https://support.google.com/webmasters/answer/9008080) · [Tạo và gửi sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap) · [Yêu cầu Google thu thập lại URL](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
+
+## 5. Vận hành và cập nhật code
+
+### Cập nhật code
+
+1. Chỉnh sửa code trên máy local, test local nếu cần.
+2. `git push` lên nhánh đã liên kết.
+3. Vào panel Mắt Bão → nhấn **Deploy**.
+4. Nếu có migration mới: chạy `npm run db:deploy` từ terminal/console trên panel sau khi deploy.
+
+### Dữ liệu và sao lưu
+
+- Database PostgreSQL do Mắt Bão quản lý. Liên hệ hỗ trợ Mắt Bão để hỏi về chính sách backup và cách export/import dữ liệu.
+- File upload (ảnh, PDF) lưu tại thư mục `UPLOAD_DIR`. Kiểm tra xem Vibe Host có persistent storage hay không — nếu không, file sẽ mất khi deploy lại; cần dùng URL HTTPS ngoài thay cho file tải lên.
+- Yêu cầu đơn hàng hết hạn sau 24 giờ nếu chưa được xác nhận. Trên Vibe Host không có cron tự động — cần thao tác thủ công hoặc hỏi Mắt Bão về scheduled jobs để chạy `npm run orders:expire`.

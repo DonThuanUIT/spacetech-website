@@ -324,15 +324,7 @@ export default function Shop({
           </Link>
         </div>
       </nav>
-      {(demo || s.demo) && (
-        <div className="demo-strip">
-          <strong>BẢN DÙNG THỬ</strong>
-          <span>
-            Giá và tồn kho minh họa · Đơn thử không phát sinh giao dịch
-          </span>
-          <Link to="/admin">Mở quản trị ↗</Link>
-        </div>
-      )}
+
       {error ? (
         <main className="container empty">
           <h2>Chưa thể tải dữ liệu</h2>

@@ -1,6 +1,6 @@
 # Thiết kế cơ sở dữ liệu
 
-Bản vận hành: PostgreSQL. Schema thực thi đầy đủ nằm trong `prisma/migrations/20261107_initial/migration.sql`; `prisma/schema.prisma` mô tả kiểu dữ liệu. Bản chạy thử dùng D1 (SQLite), migration `drizzle/0000_large_jack_murdock.sql`. Không dùng NoSQL vì giá, tồn kho, đơn và báo giá cần giao dịch nguyên tử.
+Bản vận hành dùng PostgreSQL — cài sẵn trên Vibe Host Mắt Bão. Schema thực thi đầy đủ nằm trong `prisma/migrations/20261107_initial/migration.sql`; `prisma/schema.prisma` mô tả kiểu dữ liệu. Không dùng NoSQL vì giá, tồn kho, đơn và báo giá cần giao dịch nguyên tử.
 
 ## Danh mục và thiết bị
 
@@ -26,7 +26,7 @@ erDiagram
     orders ||--o{ payments : records
 ```
 
-Các đường trong sơ đồ gồm cả liên kết logic. Migration PostgreSQL khai báo FK cho product → brand/category, specs → product, session → user, các bảng item → cha/product, quote → RFQ và payment → order. Liên kết category.parent_id, orders.user_id/quote_id, rfqs.user_id được kiểm soát trong nghiệp vụ; chưa có FK cho các trường này. Bản D1 kiểm tra quan hệ/phạm vi trong API, không khai báo FK. Với vận hành lớn cần tăng ràng buộc tương ứng và quản trị migration.
+Các đường trong sơ đồ gồm cả liên kết logic. Migration PostgreSQL khai báo FK cho product → brand/category, specs → product, session → user, các bảng item → cha/product, quote → RFQ và payment → order. Liên kết category.parent_id, orders.user_id/quote_id, rfqs.user_id được kiểm soát trong nghiệp vụ; chưa có FK cho các trường này. Với vận hành lớn cần tăng ràng buộc tương ứng và quản trị migration.
 
 ## Quy tắc lưu trữ
 
@@ -48,7 +48,7 @@ PostgreSQL có chỉ mục `products(scope,part_search)`, `specs(scope,key,value
 
 ## Tính nhất quán
 
-Checkout tính giá từ server, giữ tồn và tạo đơn/item trong cùng giao dịch. `guards` có CHECK `ok=1`; một điều kiện tồn/giá/trạng thái không còn đúng làm cả batch rollback. Node dùng SERIALIZABLE và retry lỗi serialization. D1 dùng atomic batch.
+Checkout tính giá từ server, giữ tồn và tạo đơn/item trong cùng giao dịch. `guards` có CHECK `ok=1`; một điều kiện tồn/giá/trạng thái không còn đúng làm cả batch rollback. PostgreSQL dùng SERIALIZABLE và retry lỗi serialization.
 
 Request UUID khiến việc bấm lại / retry không tạo hai đơn. quote_id duy nhất khiến một phiên bản báo giá chỉ chuyển thành một đơn. Mỗi phiên bản báo giá của một RFQ có số phiên bản duy nhất. Lưu sản phẩm kiểm tra tồn/updated để tránh ghi đè thay đổi đồng thời.
 
@@ -327,3 +327,4 @@ Request UUID khiến việc bấm lại / retry không tạo hai đơn. quote_id
 
 
 Bảng và cột thanh toán cũ được giữ để bảo toàn dữ liệu lịch sử. Phiên bản hiện tại ghi đơn mới với `method=request` và `payment_status=not_applicable` và không mở endpoint thu tiền.
+
