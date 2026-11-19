@@ -12,9 +12,9 @@
 
 ## Giới hạn kiểm tra
 
-- Môi trường build không có PostgreSQL server để chạy integration test lên database PostgreSQL thật; kiểm thử giao dịch hiện chạy trên SQLite. Cần chạy migration và toàn bộ luồng với PostgreSQL đích trước mở bán.
-- Môi trường xem giao diện cục bộ không cấp danh tính ChatGPT, nên không giả lập/bỏ qua đăng nhập để kiểm tra Admin bằng trình duyệt. Quyền Admin và nghiệp vụ đã kiểm tra qua adapter test; kiểm thử thao tác Admin đầy đủ bằng tài khoản chủ trong bản đã phát hành là bước nghiệm thu tiếp theo.
-- Gửi yêu cầu được kiểm tra qua API và đọc lại trong Admin bằng tài khoản kiểm thử. Chưa vận hành trên máy chủ PostgreSQL của người dùng.
+- Kiểm thử tự động chạy trên SQLite tích hợp sẵn trong Node (không cần PostgreSQL riêng để test). Trước khi mở bán, cần nghiệm thu toàn bộ luồng trên PostgreSQL thật của Vibe Host Mắt Bão.
+- Kiểm thử thao tác Admin đầy đủ (thêm/sửa sản phẩm, duyệt đơn, xuất PDF) thực hiện bằng tài khoản admin thật trên Vibe Host sau khi deploy.
+- App đã vận hành trên PostgreSQL của Vibe Host Mắt Bão; cần tiếp tục theo dõi lỗi và hiệu năng trong giai đoạn đầu.
 - Chưa chạy load test quy mô lớn, pentest độc lập, hỗ trợ mọi trình duyệt/thiết bị và backup/restore PostgreSQL thực tế.
 
 ## Kịch bản nghiệm thu của chủ cửa hàng
@@ -26,3 +26,4 @@
 5. Thử tắt/bật hiển thị sản phẩm, thay banner/hotline, tải lại trang để kiểm tra tính bền vững.
 6. Trên bản PostgreSQL, tạo riêng Kinh doanh/Kỹ thuật/Khách hàng; thử truy cập các API ngoài quyền và kiểm tra bị từ chối.
 7. Chỉ thay dữ liệu thử bằng dữ liệu kinh doanh sau khi đối chiếu danh mục, tồn và điều khoản.
+
