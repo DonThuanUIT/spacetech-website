@@ -14,4 +14,4 @@ COPY --from=build --chown=node:node /app ./
 RUN mkdir -p data/uploads && chown -R node:node data
 USER node
 EXPOSE 3000
-CMD ["npm","run","start:postgres"]
+CMD ["sh","-c","npm run db:deploy && npm run start:postgres"]
