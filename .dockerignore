@@ -6,12 +6,21 @@ dist
 .wrangler
 .sites-runtime
 .env
-.env.local
-.env.production
+.env.*
 .dev.vars
 data
 outputs
 *.zip
 *.tar.gz
-
 .next-postgres
+
+# Unnecessary files for Docker build
+docs
+tests
+examples
+deploy
+.openai
+*.md
+.vscode
+.idea
+tsconfig.tsbuildinfo
