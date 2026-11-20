@@ -19,7 +19,6 @@ docs
 tests
 examples
 deploy
-.openai
 *.md
 .vscode
 .idea
